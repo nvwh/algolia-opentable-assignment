@@ -1,10 +1,12 @@
 /* Tokens: OpenTable neutrals on white, red reserved for booking, focus, stars and the active state. */
 :root {
   color-scheme: light;
-  --canvas: #ffffff;
+  --canvas: #f7f6f3; /* the page */
+  --paper: #ffffff; /* everything that lifts off it: cards, bar, pills, popovers */
   --surface: #f7f7f8;
   --ink: #2d333f;
-  --ink-2: #6f737b; /* on white: 4.7:1 */
+  --ink-2: #666b73; /* 5.3:1 on white, 4.7:1 on the canvas */
+  --ink-3: #858a92; /* placeholder only: 3.1:1 on the canvas, fine at display size */
   --rule: #d8d9db;
   --accent: #da3743; /* white text on it: 4.6:1 */
   --accent-deep: #b3222e; /* red text on white: 6.2:1 */
@@ -12,12 +14,12 @@
   --shadow: 0 1px 2px rgb(45 51 63 / 0.06), 0 10px 28px -6px rgb(45 51 63 / 0.14);
   --radius: 12px;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-  --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
-  --sans: 'Figtree', 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif; /* editorial: query, names, titles */
+  --sans: 'Figtree', 'Helvetica Neue', Arial, system-ui, sans-serif; /* UI and data */
+  --header-h: 64px;
   --gutter: clamp(16px, 4vw, 48px);
   --column: 960px;
   --wide: 1200px;
-  --header-h: 64px;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -25,7 +27,6 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--canvas); color: var(--ink);
   font: 400 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased;
-  transition: background-color 0.25s var(--ease);
 }
 h1, h2, h3, p { margin: 0; }
 ul, ol { margin: 0; padding: 0; list-style: none; }
@@ -34,7 +35,8 @@ button { cursor: pointer; }
 a { color: inherit; }
 [hidden] { display: none !important; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
-mark { background: var(--tint); color: inherit; border-radius: 2px; padding-inline: 0.04em; }
+mark { background: none; color: var(--accent-deep); } /* matched words read red, not highlighted */
+:is([data-posture='find'], [data-posture='empty']) { --header-h: 52px; }
 
 .sr-only, .skip:not(:focus) {
   position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
@@ -54,37 +56,56 @@ mark { background: var(--tint); color: inherit; border-radius: 2px; padding-inli
   background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
 }
 
-/* Header */
+/* Header: sticky; while typing it shrinks to the red mark so the docked bar below reads as one bar with it. */
 .top {
-  position: sticky; top: 0; z-index: 6; background: var(--canvas);
-  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px;
-  height: var(--header-h); box-sizing: border-box; transition: height 0.25s, background-color 0.25s;
-  /* Full-bleed element, content kept on the --wide column via padding, so its fill matches the full-width stage below. */
+  position: sticky; top: 0; z-index: 6; height: var(--header-h); background: var(--canvas);
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
   padding-inline: max(var(--gutter), calc((100% - var(--wide)) / 2 + var(--gutter)));
+  transition: height 0.25s var(--ease), background-color 0.25s;
 }
-/* Same white as the docked stage and no border: header + bar read as one bar with the stage's single shadow. */
-:is([data-posture='find'], [data-posture='empty']) .top { background: var(--canvas); }
+:is([data-posture='find'], [data-posture='empty']) .top { background: var(--paper); }
 .brand { display: inline-flex; align-items: center; }
-.wordmark { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
-.wordmark-mark { flex: none; transition: transform 0.25s var(--ease, ease); transform-origin: left center; }
-.wordmark-text { display: inline-flex; align-items: center; gap: 10px; overflow: hidden; white-space: nowrap; max-width: 260px; transition: max-width 0.25s var(--ease, ease), opacity 0.2s; }
-.wordmark-name { font-weight: 700; font-size: 21px; letter-spacing: -0.02em; color: var(--ink); }
-.wordmark-sub { font-weight: 500; font-size: 15px; color: var(--ink-2, #6F737B); margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--rule);
-  overflow: hidden; white-space: nowrap; max-width: 120px; transition: max-width 0.25s var(--ease), opacity 0.2s, margin 0.25s var(--ease); }
+.wordmark { display: inline-flex; align-items: center; text-decoration: none; }
+.wordmark-mark { flex: none; transition: transform .25s var(--ease); transform-origin: left center; }
+.wordmark-text { display: inline-flex; align-items: center; gap: 10px; overflow: hidden; white-space: nowrap; max-width: 260px; transition: max-width .25s var(--ease), opacity .2s; }
+.wordmark-name { margin-left: 8px; font-weight: 700; font-size: 21px; letter-spacing: -0.02em; color: var(--ink); }
+.wordmark-sub { font-weight: 500; font-size: 15px; color: var(--ink-2); margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--rule);
+  overflow: hidden; white-space: nowrap; max-width: 120px; transition: max-width .25s var(--ease), opacity .2s, margin .25s var(--ease); }
+:is([data-posture='find'], [data-posture='empty']) :is(.wordmark-text, .wordmark-sub) { max-width: 0; opacity: 0; margin: 0; padding: 0; border: 0; }
+:is([data-posture='find'], [data-posture='empty']) .wordmark-mark { transform: scale(.85); }
+/* Compact search in the header: only on the landing, only once the big field has scrolled away. */
+.search-pill {
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 12px; min-width: 0; max-width: 280px;
+  border: 1px solid var(--rule); border-radius: 999px; background: var(--paper); color: var(--ink-2); font-size: 14px; font-weight: 500;
+  opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s, border-color 0.15s, color 0.15s;
+}
+.search-pill svg { flex: none; }
+.search-pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-pill:hover { border-color: var(--ink); color: var(--ink); }
+body[data-stage-hidden] .search-pill { opacity: 1; visibility: visible; }
+:is([data-posture='find'], [data-posture='empty']) .search-pill { display: none; } /* the docked bar is the search there */
 .where {
-  display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px;
-  border: 1px solid var(--rule); border-radius: 999px; padding: 6px 14px;
+  display: inline-flex; align-items: center; gap: 8px; font-size: 14px; white-space: nowrap;
+  border: 1px solid var(--rule); border-radius: 999px; padding: 6px 14px; background: var(--paper);
 }
 .where svg { color: var(--accent); }
 #location-text { font-weight: 600; }
 .where .link { color: var(--ink-2); font-size: 13px; }
-#location-note:not(:empty) { flex-basis: 100%; color: var(--accent-deep); font-size: 13px; }
+/* Out of flow so the note cannot grow the fixed-height header. */
+#location-note:not(:empty) {
+  position: absolute; top: calc(100% + 8px); right: var(--gutter); max-width: min(320px, calc(100vw - 2 * var(--gutter))); white-space: normal;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: var(--shadow); padding: 8px 12px;
+  color: var(--accent-deep); font-size: 13px;
+}
 
-/* Stage: the landing hero that docks into a sticky bar the moment there is a query. */
-.stage { padding: clamp(40px, 11vh, 120px) var(--gutter) 36px; transition: padding 0.25s var(--ease); }
-.stage-inner { max-width: var(--column); margin-inline: auto; }
+/* Stage: the landing that docks into a sticky bar the moment there is a query. */
+.stage { padding: 0 var(--gutter); transition: padding 0.25s var(--ease); }
+/* Browse: the search stays the focal point, but the stage is only as tall as its content so collections and results sit above the fold. */
+/* The search column stays narrower than the content below: a shorter line focuses the eye on the field. */
+[data-posture='browse'] .stage { display: grid; grid-template-columns: minmax(0, 1fr); padding-block: clamp(56px, 13vh, 136px) 28px; } /* room above: the field must clearly dominate */
+.stage-inner { width: 100%; min-width: 0; max-width: var(--column); margin-inline: auto; } /* min-width 0: the scrolling pill row must not widen the grid item */
 .stage-label { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.25s var(--ease), opacity 0.2s; }
-.stage-label h1 { overflow: hidden; font: 500 15px/1 var(--sans); color: var(--ink-2); padding-bottom: 14px; }
+.stage-label h1 { overflow: hidden; font: 500 14px/1 var(--sans); color: var(--ink-2); padding-bottom: 12px; }
 
 .field {
   position: relative; display: flex; align-items: center; gap: clamp(10px, 1.5vw, 18px);
@@ -97,42 +118,44 @@ mark { background: var(--tint); color: inherit; border-radius: 2px; padding-inli
 #searchbox .ais-SearchBox-form { display: flex; align-items: center; }
 #searchbox .ais-SearchBox-input {
   flex: 1; min-width: 0; border: 0; background: none; outline: none; padding: 0.12em 0 0.16em;
-  font: 400 clamp(34px, 4.8vw, 68px)/1.1 var(--serif); letter-spacing: -0.025em; text-overflow: ellipsis;
+  font: 600 clamp(36px, 4.6vw, 60px)/1.1 var(--serif); letter-spacing: -0.02em; text-overflow: ellipsis;
   transition: font-size 0.25s var(--ease);
 }
-#searchbox .ais-SearchBox-input::placeholder { color: var(--ink-2); opacity: 1; } /* AA, even at display size */
+#searchbox .ais-SearchBox-input::placeholder { color: var(--ink-3); opacity: 1; transition: opacity 0.25s; }
+/* searchbox.js adds .ph-fade for 250ms around each placeholder swap, so examples cross-fade instead of jumping. */
+#searchbox .ais-SearchBox-input.ph-fade::placeholder { opacity: 0; }
 .ais-SearchBox-input::-webkit-search-cancel-button { display: none; }
 .ais-SearchBox-submit, .ais-SearchBox-loadingIndicator { display: none; }
 #searchbox .ais-SearchBox-reset {
   display: grid; place-items: center; width: 32px; height: 32px; flex: none; border: 0; border-radius: 999px;
-  background: var(--surface); color: var(--ink);
+  background: rgb(45 51 63 / 0.08); color: var(--ink);
 }
-#searchbox .ais-SearchBox-reset:hover { background: var(--rule); }
+#searchbox .ais-SearchBox-reset:hover { background: rgb(45 51 63 / 0.16); }
 .ais-SearchBox-reset svg { width: 10px; height: 10px; fill: currentColor; }
 .mic { display: inline-flex; align-items: center; gap: 6px; flex: none; background: none; border: 0; padding: 6px 0; color: var(--ink-2); cursor: not-allowed; }
-.mic span { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; background: var(--surface); padding: 2px 7px; border-radius: 999px; }
+.mic span { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; background: rgb(45 51 63 / 0.08); padding: 2px 7px; border-radius: 999px; }
 
 /* Filter pills: native <details>, so each is keyboard operable and announced as expandable. */
-.pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 20px; }
 .pill { position: relative; }
 .pill > summary, .pill--all {
-  display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px 0 16px; list-style: none; cursor: pointer;
-  border: 1px solid var(--rule); border-radius: 999px; background: var(--canvas); font-size: 14px; font-weight: 500; white-space: nowrap;
-  transition: border-color 0.15s, background-color 0.15s;
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 5px 12px; list-style: none; cursor: pointer;
+  border: 1px solid var(--rule); border-radius: 999px; background: var(--paper); font-size: 13px; font-weight: 500; white-space: nowrap;
+  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
 }
 .pill > summary::-webkit-details-marker { display: none; }
 .pill > summary::after {
-  content: ''; width: 6px; height: 6px; margin: -3px 0 0 4px; border: solid currentColor; border-width: 0 1.5px 1.5px 0;
+  content: ''; width: 7px; height: 7px; margin-top: -3px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; /* 10px across once turned */
   transform: rotate(45deg); transition: transform 0.15s;
 }
 .pill[open] > summary::after { transform: translateY(3px) rotate(-135deg); }
 .pill > summary:hover, .pill--all:hover { border-color: var(--ink); }
 .pill[open] > summary { border-color: var(--ink); background: var(--surface); }
 .pill[data-active] > summary { border-color: var(--accent); background: var(--tint); }
-.pill--all { padding-inline: 14px; margin-left: auto; }
+.pill--all { margin-left: auto; }
 .pop {
   position: absolute; z-index: 10; top: calc(100% + 8px); left: 0; width: 300px; max-height: min(420px, 60vh); overflow-y: auto;
-  background: var(--canvas); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px;
   overscroll-behavior: contain;
 }
 .pill[open] .pop { animation: pop 0.14s var(--ease); }
@@ -159,68 +182,66 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--accent); width
 /* Far away: an inline banner under the field, with the way forward in it. */
 .far {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px;
-  margin-top: 20px; padding: 16px 18px; background: var(--surface); border-radius: var(--radius); font-size: 15px;
+  margin-top: 20px; padding: 16px 18px; background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); font-size: 15px;
 }
 .far strong { font-weight: 600; }
 .far p { flex: 1 1 320px; }
 .far form { display: flex; gap: 8px; }
-.far select { max-width: 60vw; padding: 8px 12px; background: var(--canvas); border: 1px solid var(--rule); border-radius: 999px; }
+.far select { max-width: 60vw; padding: 8px 12px; background: var(--paper); border: 1px solid var(--rule); border-radius: 999px; }
 .far button { background: var(--accent); border-color: var(--accent); }
 
 /* Panel: no chrome while browsing; in find it becomes the white sheet hanging off the bar. */
 .panel { max-width: var(--wide); margin-inline: auto; padding-inline: var(--gutter); }
 
 /* Tiles */
-.tiles { padding-bottom: 72px; }
-.tiles:not(.is-ready) { display: none; }
-.tiles-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.tile-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 2vw, 24px); }
+.tiles, .results { scroll-margin-top: calc(var(--header-h) + 16px); } /* clear the sticky header */
+.tiles { padding-bottom: 40px; }
+.tiles:not(.is-ready) .tile-row { visibility: hidden; } /* keep the space so the results do not jump when the picks arrive */
+.tiles-title { font: 600 18px/1.2 var(--serif); letter-spacing: -0.02em; margin-bottom: 12px; }
+.tile-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+/* Colour does the work of the old photos; each card carries its own ink and sub-ink as custom properties. */
 .tile {
-  display: grid; gap: 2px; text-align: left; background: none; border: 0; padding: 0; border-radius: var(--radius);
+  --bg: #f9dcdd; --fg: var(--ink); --sub: #4d525b;
+  display: flex; align-items: center; gap: 16px; min-height: 96px; padding: 16px 18px; /* flex: with no thumbnail the text fills the card, no dead column */
+  text-align: left; border: 0; border-radius: var(--radius); background: var(--bg); color: var(--fg);
+  transition: box-shadow 0.2s var(--ease), transform 0.2s var(--ease);
 }
-.tile-media {
-  position: relative; display: block; aspect-ratio: 4 / 3; margin-bottom: 12px; overflow: hidden; border-radius: var(--radius);
-  background: var(--tint); outline: 2px solid transparent; outline-offset: 3px; transition: outline-color 0.15s;
-}
-/* Each collection gets its own ground, so the row reads as three choices even with no photos. */
-#tile-gems { background: #eef0f3; }
-#tile-occasion { background: var(--ink); color: #fff; }
-#tile-occasion .tile-fallback small { color: #c9ccd1; }
-.tile-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s var(--ease); }
-.tile:hover .tile-media img { transform: scale(1.03); }
-/* Each collection gets its own ground, so the row reads as three choices even with no photos. */
-#tile-gems { background: #eef0f3; }
-#tile-occasion { background: var(--ink); color: #fff; }
-#tile-occasion .tile-fallback small { color: #c9ccd1; }
-.tile-media img { transform: scale(1.03); }
-.tile-fallback {
-  position: absolute; inset: 0; display: grid; align-content: end; gap: 4px; padding: 20px;
-  font: 400 clamp(20px, 2vw, 26px)/1.15 var(--serif); letter-spacing: -0.01em;
-}
-.tile-fallback small { font: 600 11px var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); }
-.tile-title { font: 400 clamp(22px, 2.2vw, 30px)/1.1 var(--serif); letter-spacing: -0.015em; }
-.tile-title::after { content: ' →'; font-family: var(--sans); font-size: 0.7em; color: var(--ink-2); transition: margin 0.15s; }
+.tile[data-tag='Hidden gem'] { --bg: #dedaf0; }
+.tile[data-tag='Special occasion'] { --bg: var(--ink); --fg: #fff; --sub: #c9ccd1; }
+.tile-text { display: grid; gap: 1px; flex: 1; min-width: 0; }
+.tile-eyebrow { font: 600 10px/1.4 var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--sub); }
+.tile-title { font: 600 19px/1.15 var(--serif); letter-spacing: -0.02em; }
+.tile-title::after { content: ' →'; font-family: var(--sans); font-size: 0.7em; transition: margin 0.15s; }
 .tile:hover .tile-title::after { margin-left: 4px; }
-.tile-count { font-size: 14px; color: var(--ink-2); }
-.tile[aria-pressed='true'] .tile-media { outline-color: var(--accent); }
+.tile-count { font-size: 12.5px; line-height: 1.35; color: var(--sub); }
+.tile-pick { margin-top: 3px; font-size: 12.5px; line-height: 1.35; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-media { flex: none; width: 72px; aspect-ratio: 1; overflow: hidden; border-radius: 10px; background: rgb(45 51 63 / 0.08); }
+.tile-media:not(.is-loaded) { display: none; } /* no photo (yet, or failed): only the colour card shows, never an empty square */
+.tile-media img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tile:hover { box-shadow: var(--shadow); }
+@media (prefers-reduced-motion: no-preference) { .tile:hover { transform: translateY(-2px); } }
+.tile:focus-visible { border-radius: var(--radius); outline-offset: 3px; } /* the global focus rule would square the corners */
+.tile[aria-pressed='true'] { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tile[aria-pressed='true'] .tile-title::after { content: ' ✓'; color: var(--accent); }
-[data-far] .tiles, [data-location='metro'] .tiles { display: none; }
+.tile[data-tag='Special occasion'][aria-pressed='true'] .tile-title::after { color: #fff; }
 
 /* Results header */
 .results { padding-bottom: 96px; transition: opacity 0.2s; }
 [data-stalled] .results { opacity: 0.5; }
 .results-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; padding-bottom: 20px; }
-.section-title { font: 400 clamp(28px, 3vw, 40px)/1.1 var(--serif); letter-spacing: -0.02em; margin-right: auto; }
+.section-title { font: 600 clamp(28px, 3vw, 40px)/1.1 var(--serif); letter-spacing: -0.02em; margin-right: auto; }
+[data-posture='browse'] .section-title { font-size: clamp(22px, 2.2vw, 28px); }
 .badge:empty { display: none; }
 .badge {
   display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--accent-deep);
   background: var(--tint); border-radius: 999px; padding: 3px 10px;
 }
+.field .badge { flex: none; white-space: nowrap; }
 .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 #stats { color: var(--ink-2); font-size: 14px; font-variant-numeric: tabular-nums; }
 .ais-SortBy-select {
   appearance: none; border: 1px solid var(--rule); border-radius: 999px; padding: 6px 30px 6px 14px; font-size: 14px; font-weight: 500;
-  background: var(--canvas) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%232d333f' stroke-width='1.4'/%3E%3C/svg%3E") no-repeat right 12px center;
+  background: var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%232d333f' stroke-width='1.4'/%3E%3C/svg%3E") no-repeat right 12px center;
 }
 .refined { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .refined:has(.ais-CurrentRefinements--noRefinement) { display: none; }
@@ -245,15 +266,16 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--accent); width
   font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2);
 }
 .card-tag {
-  position: absolute; top: 10px; left: 10px; background: var(--canvas); border-radius: 999px; padding: 3px 9px;
+  position: absolute; top: 10px; left: 10px; background: var(--paper); border-radius: 999px; padding: 3px 9px;
   font-size: 12px; font-weight: 600; box-shadow: 0 1px 2px rgb(45 51 63 / 0.12);
 }
 .card-body { display: grid; gap: 5px; align-content: start; min-width: 0; }
-.card-name { font: 400 22px/1.15 var(--serif); letter-spacing: -0.012em; text-wrap: balance; }
+.card-name { font: 600 22px/1.15 var(--serif); letter-spacing: -0.02em; text-wrap: balance; }
 .card-brand { display: block; font: 600 12px/1.3 var(--sans); letter-spacing: 0.02em; color: var(--ink-2); margin-bottom: 2px; }
 .card-brand small { font-weight: 400; font-size: 12px; }
 .card-branch { display: block; }
 .card-where { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px; color: var(--ink-2); }
+.card-city--dup { display: none; } /* rows keep their old text; only grid cards repeat the city */
 .card-hood { background: var(--surface); color: var(--ink); border-radius: 999px; padding: 1px 9px; font-size: 13px; font-weight: 500; }
 .card-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .card-rating { display: inline-flex; align-items: center; gap: 4px; }
@@ -272,28 +294,25 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--accent); width
 
 /* Browse: a calm three-column grid. */
 .ais-InfiniteHits-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 44px clamp(16px, 2vw, 28px); }
+[data-posture='browse'] .ais-InfiniteHits-list { row-gap: 28px; }
 .ais-InfiniteHits-loadMore {
-  display: block; margin: 56px auto 0; background: var(--canvas); border: 1px solid var(--ink); border-radius: 999px; padding: 11px 26px; font-weight: 600;
+  display: block; margin: 56px auto 0; background: var(--paper); border: 1px solid var(--ink); border-radius: 999px; padding: 11px 26px; font-weight: 600;
 }
 .ais-InfiniteHits-loadMore:hover { background: var(--ink); color: #fff; }
 .ais-InfiniteHits-loadMore--disabled, .ais-InfiniteHits-loadPrevious { display: none; }
 
-/* Find + empty: page turns surface grey, the stage docks as a sticky white bar, the panel hangs off it. */
-[data-posture='find'], [data-posture='empty'] { background: var(--surface); }
+/* Find + empty: the stage docks as a sticky white bar under the header, the panel hangs off it. */
 :is([data-posture='find'], [data-posture='empty']) .stage {
-  position: sticky; top: var(--header-h); z-index: 5; background: var(--canvas); padding-block: 14px 14px;
+  position: sticky; top: var(--header-h); z-index: 5; background: var(--paper); padding-block: 4px 14px; /* header above carries the top edge */
   border-bottom: 1px solid var(--rule); box-shadow: var(--shadow);
 }
-:is([data-posture='find'], [data-posture='empty']) { --header-h: 52px; }
-:is([data-posture='find'], [data-posture='empty']) :is(.wordmark-text, .wordmark-sub) { max-width: 0; opacity: 0; margin: 0; padding: 0; border: 0; }
-:is([data-posture='find'], [data-posture='empty']) .wordmark-mark { transform: scale(0.85); }
 :is([data-posture='find'], [data-posture='empty']) .stage-label { grid-template-rows: 0fr; opacity: 0; }
 :is([data-posture='find'], [data-posture='empty']) .stage-label h1 { padding: 0; }
 :is([data-posture='find'], [data-posture='empty']) #searchbox .ais-SearchBox-input { font-size: clamp(24px, 2.4vw, 32px); }
 :is([data-posture='find'], [data-posture='empty']) .field-icon { width: 24px; }
 :is([data-posture='find'], [data-posture='empty']) .pills { margin-top: 12px; }
 :is([data-posture='find'], [data-posture='empty']) .panel {
-  max-width: calc(var(--column) + 2 * 28px); background: var(--canvas); padding: 24px 28px 8px;
+  max-width: calc(var(--column) + 2 * 28px); background: var(--paper); padding: 24px 28px 8px;
   border: 1px solid var(--rule); border-top: 0; border-radius: 0 0 var(--radius) var(--radius); margin-bottom: 64px;
 }
 [data-posture='find'] .tiles, [data-posture='find'] .empty { display: none; }
@@ -319,30 +338,86 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--accent); width
 [data-posture='find'] .card--lead .card-name { font-size: clamp(30px, 3.4vw, 44px); line-height: 1.05; }
 [data-posture='find'] .card--lead .reserve { font-size: 15px; padding: 13px 26px; }
 
+/* Landing quick searches: same family as the pills but quieter, so they read as suggestions, not controls. */
+
+/* Cards: cuisine, city and broad queries read as a photo grid; name searches stay compact rows (data-results='list'). */
+.card-dist { display: none; }
+[data-results='cards'] .card-dist {
+  display: block; position: absolute; top: 12px; right: 12px; background: var(--paper); border-radius: 999px; padding: 3px 11px;
+  font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+[data-posture='find'][data-results='cards'] .ais-InfiniteHits-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+[data-posture='find'][data-results='cards'] .ais-InfiniteHits-item { border: 0; padding: 0; }
+[data-posture='find'][data-results='cards'] .card {
+  display: flex; flex-direction: column; gap: 0; align-items: stretch; /* the list rule centres items, which would collapse the photo to zero width */
+}
+[data-posture='find'][data-results='cards'] .card-media { aspect-ratio: 16 / 10; border-radius: 0; }
+[data-posture='find'][data-results='cards'] .card-fallback { font-size: 11px; letter-spacing: 0.12em; }
+[data-posture='find'][data-results='cards'] .card-body { padding: 16px 16px 0; gap: 6px; flex: 1; } /* flex: 1 pushes the in-flow Reserve to the card's bottom edge */
+[data-posture='find'][data-results='cards'] .reserve {
+  align-self: flex-start; margin: 14px 16px 16px; background: var(--accent); color: #fff; padding: 9px 20px;
+}
+[data-posture='find'][data-results='cards'] .card--lead .reserve { font-size: 14px; padding: 9px 20px; } /* the lead row's bigger button would sit lower than its neighbours */
+
+/* Without photos the cuisine is the picture: set in the serif, large, on its tint. Rows and phone thumbnails keep the small caps. */
+@media (min-width: 701px) {
+  :is([data-posture='browse'], [data-posture='find'][data-results='cards']) .card-fallback {
+    font: 500 italic clamp(20px, 1.9vw, 25px)/1.1 var(--serif); letter-spacing: -0.01em; text-transform: none; color: var(--ink-2);
+  }
+}
+
+/* Photo cards, one look wherever they appear: white, hairline border, the same radius as the tiles. */
+:is([data-posture='browse'], [data-posture='find'][data-results='cards']) .card {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden;
+  transition: box-shadow 0.2s var(--ease);
+}
+:is([data-posture='browse'], [data-posture='find'][data-results='cards']) .card:hover { box-shadow: var(--shadow); } /* shadow only: a border change stays stuck after the pointer leaves */
+[data-posture='find'][data-results='cards'] .card-name { font-size: 24px; }
+[data-posture='browse'] .card-name { font-size: 19px; }
+[data-posture='browse'] .card-media { aspect-ratio: 16 / 10; }
+[data-posture='browse'] .reserve { font-size: 13px; padding: 7px 14px; }
+@media (min-width: 701px) {
+  [data-posture='browse'] .card { gap: 0; }
+  [data-posture='browse'] .card-media { border-radius: 0; }
+  [data-posture='browse'] .card-body { padding: 12px 14px 10px; gap: 4px; }
+  [data-posture='browse'] .reserve { margin: 0 14px 14px; }
+
+  /* Grid cards: same structure and heights in every card, so Reserve buttons share one baseline per row. Rows (data-results='list') are untouched. */
+  :is([data-posture='browse'], [data-posture='find'][data-results='cards']) .card { display: flex; flex-direction: column; align-items: stretch; }
+  :is([data-posture='browse'], [data-posture='find'][data-results='cards']) .card-body { flex: 1; } /* the spare height sits above Reserve */
+  :is([data-posture='browse'], [data-posture='find'][data-results='cards']) .reserve { align-self: flex-start; }
+  :is([data-posture='browse'], [data-posture='find'][data-results='cards']) .card-name {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+    min-height: 2.3em; /* two lines (line-height 1.15) reserved, so one- and two-line names start the next line at the same y */
+  }
+  :is([data-posture='browse'], [data-posture='find'][data-results='cards']) .card-where { flex-direction: column; align-items: flex-start; gap: 4px; }
+  :is([data-posture='browse'], [data-posture='find'][data-results='cards']) .card-where > * { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :is([data-posture='browse'], [data-posture='find'][data-results='cards']) .card-city--dup { display: inline; } /* cuisine · city always, even when the pill already shows the city */
+}
+
 /* Empty: the query set large, a way out, then the cached tiles as somewhere to go. */
 .empty { display: none; padding-block: 16px 40px; }
 [data-posture='empty'] .empty { display: block; }
 [data-posture='empty'] .results { display: none; }
 .empty-kicker { font-size: 14px; font-weight: 500; color: var(--ink-2); }
-.empty h2 { font: 400 clamp(36px, 5vw, 60px)/1.05 var(--serif); letter-spacing: -0.025em; overflow-wrap: anywhere; margin-block: 4px 12px; }
+.empty h2 { font: 600 clamp(36px, 5vw, 60px)/1.05 var(--serif); letter-spacing: -0.02em; overflow-wrap: anywhere; margin-block: 4px 12px; }
 .empty > p:not(.empty-kicker) { font-size: 16px; color: var(--ink-2); }
 .empty-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 20px; }
-#empty-clear .ais-ClearRefinements-button { background: var(--canvas); color: var(--ink); }
+#empty-clear .ais-ClearRefinements-button { background: var(--paper); color: var(--ink); }
 [data-posture='empty'] .tiles { border-top: 1px solid var(--rule); padding-block: 28px 24px; }
-[data-posture='empty'] .tiles-title { position: static; width: auto; height: auto; clip-path: none; font: 400 26px/1.1 var(--serif); margin-bottom: 18px; }
-[data-posture='empty'] .tile-title { font-size: 22px; }
+[data-posture='empty'] .tiles-title { position: static; width: auto; height: auto; clip-path: none; font: 600 26px/1.1 var(--serif); letter-spacing: -0.02em; margin-bottom: 18px; }
 
 /* Filters sheet: a native dialog, so focus trapping, Escape and the backdrop come for free. */
 .sheet {
   margin: 0 0 0 auto; width: min(440px, 100%); height: 100dvh; max-height: 100dvh; max-width: 100%;
-  padding: 0; border: 0; background: var(--canvas); color: var(--ink); display: none; flex-direction: column;
+  padding: 0; border: 0; background: var(--paper); color: var(--ink); display: none; flex-direction: column;
 }
 .sheet[open] { display: flex; animation: slide 0.25s var(--ease); }
 @keyframes slide { from { transform: translateX(24px); opacity: 0; } }
 .sheet::backdrop { background: rgb(45 51 63 / 0.45); }
 .sheet header, .sheet footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 24px; }
 .sheet header { border-bottom: 1px solid var(--rule); }
-.sheet header h2 { font: 400 28px/1 var(--serif); }
+.sheet header h2 { font: 600 28px/1 var(--serif); letter-spacing: -0.02em; }
 .sheet-body { flex: 1; overflow-y: auto; padding: 0 16px; overscroll-behavior: contain; }
 .sheet-body section { padding: 18px 8px; border-bottom: 1px solid var(--rule); }
 .sheet-body h3 { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; margin: 0 8px 6px; }
@@ -353,24 +428,29 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--accent); width
 
 .preview-badge {
   position: fixed; left: 12px; bottom: 12px; z-index: 4; pointer-events: none; font-size: 12px; color: var(--ink-2);
-  background: var(--canvas); border: 1px solid var(--rule); padding: 4px 10px; border-radius: 999px;
+  background: var(--paper); border: 1px solid var(--rule); padding: 4px 10px; border-radius: 999px;
 }
 
-/* Tablet */
-@media (max-width: 1000px) {
-  .ais-InfiniteHits-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
+/* Landing grid: 4 columns wide, 3 by default, 2 on tablets, rows on phones. Find keeps 3, then 2 on tablets. */
+@media (min-width: 1200px) { [data-posture='browse'] .ais-InfiniteHits-list { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 1000px) { [data-posture='find'][data-results='cards'] .ais-InfiniteHits-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 899px) { [data-posture='browse'] .ais-InfiniteHits-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 
 /* Phone */
 @media (max-width: 700px) {
-  /* The location pill wraps under the logo on a phone, so the landing header grows; once typing, the logo is just the mark and one row fits. */
-  .top { padding-block: 12px; height: auto; min-height: var(--header-h); flex-wrap: wrap; }
-  :is([data-posture='find'], [data-posture='empty']) .top { height: var(--header-h); flex-wrap: nowrap; padding-block: 0; }
-  .wordmark-sub { display: none; } /* no room next to the location pill */
   .where { padding: 4px 12px; font-size: 13px; }
-  .stage { padding-top: 32px; }
+  /* Logo and location pill do not fit on one phone row: the landing header wraps; once typing, the logo is just the mark and one row fits. */
+  .top { height: auto; min-height: var(--header-h); flex-wrap: wrap; row-gap: 8px; padding-block: 12px; }
+  .wordmark-sub { display: none; }
+  /* Row one holds the logo and search (icon only); the location pill takes row two. */
+  .search-pill { width: 36px; padding: 0; justify-content: center; }
+  .search-pill span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } /* still the accessible name */
+  :is([data-posture='find'], [data-posture='empty']) .top { height: var(--header-h); flex-wrap: nowrap; padding-block: 0; }
   #searchbox .ais-SearchBox-input { font-size: clamp(26px, 7.6vw, 40px); }
   .mic span { display: none; }
+  .field { flex-wrap: wrap; }
+  .badge { order: 5; margin-bottom: 8px; }
   /* One swipeable line; "All filters" leads because the sheet is the full set. */
   .pills {
     flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
@@ -384,18 +464,20 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--accent); width
     border-radius: var(--radius) var(--radius) 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
     box-shadow: 0 0 0 100vmax rgb(45 51 63 / 0.4);
   }
-  .pop::before { content: attr(data-title); display: block; font: 400 24px/1 var(--serif); padding: 4px 8px 14px; }
+  .pop::before { content: attr(data-title); display: block; font: 600 24px/1 var(--serif); letter-spacing: -0.02em; padding: 4px 8px 14px; }
   @keyframes pop { from { transform: translateY(16px); opacity: 0; } }
-  .tiles { padding-bottom: 48px; }
+  .tiles { padding-bottom: 32px; }
+  /* One swipeable row, gutter-aligned like the pills; the next card peeks to say there is more. */
   .tile-row {
-    grid-auto-flow: column; grid-auto-columns: 74%; grid-template-columns: none; overflow-x: auto; scroll-snap-type: x mandatory;
-    margin-inline: calc(var(--gutter) * -1); padding: 4px var(--gutter); scroll-padding-inline: var(--gutter); scrollbar-width: none;
+    grid-auto-flow: column; grid-auto-columns: 78%; grid-template-columns: none; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+    margin: -6px calc(var(--gutter) * -1); padding: 6px var(--gutter); scroll-padding-inline: var(--gutter); scrollbar-width: none; /* room for the selected outline */
   }
-  .tile { scroll-snap-align: start; }
-  .tile-media { aspect-ratio: 16 / 10; }
+  .tile-row::-webkit-scrollbar { display: none; }
+  .tile { scroll-snap-align: start; padding: 14px 16px; gap: 12px; }
   /* Phone: every posture lists rows, a page of full-width photos is too slow to scan. */
   .ais-InfiniteHits-list { display: block; }
   .ais-InfiniteHits-item { border-bottom: 1px solid var(--rule); padding-block: 16px; }
+  [data-posture='find'][data-results='cards'] .ais-InfiniteHits-list { display: grid; grid-template-columns: minmax(0, 1fr); }
   .far form { width: 100%; }
   .far select { flex: 1; min-width: 0; max-width: none; }
 
