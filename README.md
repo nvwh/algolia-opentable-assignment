@@ -1,6 +1,6 @@
 # OpenTable restaurant discovery, built on Algolia
 
-**Live demo:** https://nvwh.github.io/algolia-opentable-assignment/
+**Live demo:** https://nvwh.github.io/opentable-discover/
 
 A prototype of how OpenTable's search and discovery could feel on Algolia, built for the Algolia Solutions Engineer assignment.
 
