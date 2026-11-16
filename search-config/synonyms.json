@@ -1,0 +1,10 @@
+[
+  {"objectID": "steak", "type": "synonym", "synonyms": ["steak", "steakhouse"]},
+  {"objectID": "bbq", "type": "synonym", "synonyms": ["bbq", "barbecue", "barbeque", "meat"]},
+  {"objectID": "pizza", "type": "synonym", "synonyms": ["pizza", "pizzeria"]},
+  {"objectID": "tapas", "type": "synonym", "synonyms": ["tapas", "small plates", "spanish"]},
+  {"objectID": "sushi-japanese", "type": "oneWaySynonym", "input": "sushi", "synonyms": ["japanese"]},
+  {"objectID": "nyc", "type": "synonym", "synonyms": ["nyc", "new york city", "new york"]},
+  {"objectID": "sf", "type": "synonym", "synonyms": ["sf", "san francisco"]},
+  {"objectID": "texasdebrazil", "type": "oneWaySynonym", "input": "texasdebrazil", "synonyms": ["texas de brazil"]}
+]

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenTable Discover, an Algolia prototype</title>
+    <meta name="description" content="Restaurant discovery prototype for OpenTable, built on Algolia." />
+    <link rel="icon" href="data:," />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Figtree:wght@400;500;600;700&display=swap"
+    />
+    <script type="module" src="/src/main.js"></script>
+  </head>
+  <body data-posture="browse" data-location="ip">
+    <a class="skip" href="#results">Skip to results</a>
+
+    <header class="top">
+      <div class="brand">
+      <a class="wordmark" href="/" aria-label="OpenTable, home">
+        <!-- Mark redrawn from the OpenTable logo: small dot, red disc with a white centre. -->
+        <svg class="wordmark-mark" viewBox="0 0 40 28" width="40" height="28" aria-hidden="true">
+          <circle cx="4" cy="14" r="3.2" fill="#DA3743"/>
+          <circle cx="25" cy="14" r="13" fill="#DA3743"/>
+          <circle cx="25" cy="14" r="4.6" fill="#fff"/>
+        </svg>
+        <span class="wordmark-text"><span class="wordmark-name">OpenTable</span></span>
+      </a>
+      <!-- Outside the link on purpose: only the logo goes home; "Discover" names this prototype. -->
+      <span class="wordmark-sub">Discover</span>
+      </div>
+      <p class="where">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 14.5s5-4.3 5-8.2A5 5 0 0 0 3 6.3c0 3.9 5 8.2 5 8.2Z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="6.3" r="1.7" fill="currentColor"/></svg>
+        <span id="location-text">Near you</span>
+        <button id="precise" class="link" type="button">Use precise location</button>
+        <span id="location-note" role="status"></span>
+      </p>
+    </header>
+
+    <main>
+      <section class="stage" aria-label="Search restaurants">
+        <div class="stage-inner">
+          <div class="stage-label"><h1 id="stage-title">Where to tonight?</h1></div>
+          <div class="field">
+            <svg class="field-icon" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m15.5 15.5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <div id="searchbox"></div>
+            <!-- Shown to tell the voice story; deliberately not wired. aria-disabled keeps it focusable so the label can be read. -->
+            <button class="mic" type="button" aria-disabled="true" aria-label="Voice search, coming soon" title="Voice search, coming soon">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm6-3a6 6 0 0 1-12 0M12 18v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span>Soon</span>
+            </button>
+          </div>
+
+          <!-- Same refinement widgets in every posture, so a filter set on the landing carries into results. -->
+          <div class="pills" role="group" aria-label="Filters">
+            <details class="pill" name="filter" data-attr="cuisine_group">
+              <summary>Cuisine <span class="count"></span></summary>
+              <div class="pop" data-title="Cuisine"><div id="p-cuisine"></div></div>
+            </details>
+            <details class="pill" name="filter" data-attr="price_label">
+              <summary>Price <span class="count"></span></summary>
+              <div class="pop" data-title="Price"><div id="p-price"></div></div>
+            </details>
+            <details class="pill" name="filter" data-attr="stars_count">
+              <summary>Rating <span class="count"></span></summary>
+              <div class="pop" data-title="Rating"><div id="p-rating"></div></div>
+            </details>
+            <details class="pill" name="filter" data-attr="dining_style">
+              <summary>Style <span class="count"></span></summary>
+              <div class="pop" data-title="Style"><div id="p-style"></div></div>
+            </details>
+            <details class="pill" name="filter" data-attr="area">
+              <summary>Metro <span class="count"></span></summary>
+              <div class="pop" data-title="Metro"><div id="p-area"></div></div>
+            </details>
+            <button id="open-filters" class="pill pill--all" type="button" aria-haspopup="dialog">
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 4h12M4.5 8h7M7 12h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              All filters <span id="filter-count" class="count"></span>
+            </button>
+          </div>
+
+          <aside class="far" id="far" hidden>
+            <p><strong>Nothing within 60 miles of you.</strong> This demo covers restaurants in US cities. Pick a metro to explore.</p>
+            <form id="metro-form">
+              <label class="sr-only" for="metro">Metro area</label>
+              <select id="metro"></select>
+              <button type="submit">Explore</button>
+            </form>
+          </aside>
+        </div>
+      </section>
+
+      <div class="panel">
+        <section class="empty" aria-labelledby="empty-title">
+          <p class="empty-kicker">No matches for</p>
+          <h2 id="empty-title">“<span id="empty-query"></span>”</h2>
+          <p>Check the spelling, try fewer words, or loosen a filter.</p>
+          <div class="empty-actions">
+            <button id="clear-query" class="button" type="button">Clear the search</button>
+            <div id="empty-clear"></div>
+          </div>
+        </section>
+
+        <!-- Each tile's photo comes from its own one-hit index; its count comes from the main index's tags facet. -->
+        <section class="tiles" aria-labelledby="tiles-title">
+          <h2 id="tiles-title" class="tiles-title">Popular near you</h2>
+          <div class="tile-row">
+            <button class="tile" type="button" data-tag="Crowd favourite" aria-pressed="false">
+              <span class="tile-media" id="tile-favourites" aria-hidden="true"></span>
+              <span class="tile-title">Crowd favourites</span>
+              <span class="tile-count"></span>
+            </button>
+            <button class="tile" type="button" data-tag="Hidden gem" aria-pressed="false">
+              <span class="tile-media" id="tile-gems" aria-hidden="true"></span>
+              <span class="tile-title">Hidden gems</span>
+              <span class="tile-count"></span>
+            </button>
+            <button class="tile" type="button" data-tag="Special occasion" aria-pressed="false">
+              <span class="tile-media" id="tile-occasion" aria-hidden="true"></span>
+              <span class="tile-title">Special occasion</span>
+              <span class="tile-count"></span>
+            </button>
+          </div>
+        </section>
+
+        <section id="results" class="results" aria-labelledby="lead-title">
+          <div class="results-head">
+            <h2 id="lead-title" class="section-title">Near you</h2>
+            <p id="badge" class="badge" aria-live="polite"></p>
+            <div id="stats" aria-live="polite"></div>
+            <div id="sort"></div>
+          </div>
+          <div class="refined"><div id="refinements"></div><div id="clear"></div></div>
+          <div id="hits"></div>
+        </section>
+      </div>
+    </main>
+
+    <dialog id="filters" class="sheet" closedby="any" aria-labelledby="filters-title">
+      <header>
+        <h2 id="filters-title">Filters</h2>
+        <form method="dialog"><button class="link">Close</button></form>
+      </header>
+      <div class="sheet-body">
+        <section><h3>Cuisine</h3><div id="f-cuisine"></div></section>
+        <section><h3>Price</h3><div id="f-price"></div></section>
+        <section><h3>Rating</h3><div id="f-rating"></div></section>
+        <section><h3>Dining style</h3><div id="f-style"></div></section>
+        <section><h3>Metro</h3><div id="f-area"></div></section>
+        <section><h3>City</h3><div id="f-city"></div></section>
+      </div>
+      <footer>
+        <div id="f-clear"></div>
+        <form method="dialog"><button class="apply" id="f-apply"></button></form>
+      </footer>
+    </dialog>
+
+    <p class="preview-badge" hidden>Preview data, not live search</p>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "restaurants_rating_desc": {
+    "ranking": ["desc(popularity_score)", "typo", "geo", "words", "filters", "proximity", "attribute", "exact", "custom"]
+  },
+  "restaurants_reviews_desc": {
+    "ranking": ["desc(reviews_count)", "typo", "geo", "words", "filters", "proximity", "attribute", "exact", "custom"]
+  },
+  "restaurants_price_asc": {
+    "ranking": ["asc(price)", "typo", "geo", "words", "filters", "proximity", "attribute", "exact", "custom"]
+  }
+}

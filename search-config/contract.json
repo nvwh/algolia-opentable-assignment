@@ -1,0 +1,40 @@
+{
+  "_readme": "Single source of truth for record shape and attribute roles. This contract MUST not be edited.",
+  "status": "FROZEN.",
+  "index": "restaurants",
+  "replicas": {
+    "restaurants_rating_desc": "Top rated: popularity_score desc",
+    "restaurants_reviews_desc": "Most reviewed: reviews_count desc",
+    "restaurants_price_asc": "Price low to high: price asc, then popularity_score desc"
+  },
+  "attributes": {
+    "objectID":             { "type": "string",   "source": "both files, join key, cast to string", "role": ["id"] },
+    "name":                 { "type": "string",   "source": "json", "role": ["searchable:1", "display"] },
+    "brand":                { "type": "string",   "source": "derived: name before ' - ', ' – ', ' — ', ' @ ' or '('", "role": ["facet:filterOnly", "display"] },
+    "brand_location_count": { "type": "number",   "source": "derived: records sharing the same brand", "role": ["display"] },
+    "food_type":            { "type": "string",   "source": "csv, original value kept", "role": ["searchable:2", "display"] },
+    "cuisine_group":        { "type": "string",   "source": "derived: 114 food_type values merged into about 20 groups", "role": ["searchable:2", "facet:searchable", "display"] },
+    "neighborhood":         { "type": "string",   "source": "csv", "role": ["searchable:3", "display"] },
+    "city":                 { "type": "string",   "source": "json", "role": ["searchable:3", "facet:searchable"] },
+    "area":                 { "type": "string",   "source": "json, metro level, 51 values", "role": ["searchable:3", "facet:searchable"] },
+    "state":                { "type": "string",   "source": "json, 2-letter code", "role": ["facet"] },
+    "address":              { "type": "string",   "source": "json", "role": ["searchable:4", "display"] },
+    "postal_code":          { "type": "string",   "source": "json", "role": ["display"] },
+    "location_label":       { "type": "string",   "source": "derived: 'neighborhood, city, state' without repeats", "role": ["display"] },
+    "price":                { "type": "number",   "source": "json: 2, 3 or 4. Wins over price_range when they disagree", "role": ["sort", "display"] },
+    "price_label":          { "type": "string",   "source": "derived from price: $$, $$$, $$$$", "role": ["facet", "display"] },
+    "price_range":          { "type": "string",   "source": "csv, original text kept", "role": ["display"] },
+    "dining_style":         { "type": "string",   "source": "csv, 4 values", "role": ["facet", "display"] },
+    "stars_count":          { "type": "number",   "source": "csv, cast to float", "role": ["numericFilter", "customRanking:2", "display"] },
+    "reviews_count":        { "type": "number",   "source": "csv, cast to int", "role": ["customRanking:3", "sort", "display"] },
+    "popularity_score":     { "type": "number",   "source": "derived: Bayesian average of stars weighted by reviews", "role": ["customRanking:1", "sort"] },
+    "payment_options":      { "type": "string[]", "source": "json", "role": ["facet"] },
+    "tags":                 { "type": "string[]", "source": "derived, optional: deterministic discovery tags from dining_style, price, rating", "role": ["facet", "display"] },
+    "phone":                { "type": "string",   "source": "csv phone_number, already formatted. The json phone is dropped (half end with a stray 'x')", "role": ["display"] },
+    "image_url":            { "type": "string",   "source": "json", "role": ["display"] },
+    "reserve_url":          { "type": "string",   "source": "json, upgraded to https", "role": ["display"] },
+    "mobile_reserve_url":   { "type": "string",   "source": "json, upgraded to https", "role": ["display"] },
+    "_geoloc":              { "type": "{lat:number,lng:number}", "source": "json", "role": ["geo"] }
+  },
+  "dropped": ["country (always US)", "json phone (replaced by csv phone_number)"]
+}

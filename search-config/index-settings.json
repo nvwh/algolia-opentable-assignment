@@ -1,0 +1,35 @@
+{
+  "searchableAttributes": [
+    "unordered(name)",
+    "cuisine_group,food_type",
+    "neighborhood,city",
+    "area",
+    "address",
+    "payment_options"
+  ],
+  "customRanking": [
+    "desc(popularity_score)",
+    "desc(stars_count)",
+    "desc(reviews_count)"
+  ],
+  "attributesForFaceting": [
+    "searchable(cuisine_group)",
+    "searchable(city)",
+    "searchable(area)",
+    "price_label",
+    "dining_style",
+    "state",
+    "payment_options",
+    "tags",
+    "filterOnly(brand)"
+  ],
+  "queryLanguages": [
+    "en"
+  ],
+  "ignorePlurals": true,
+  "removeStopWords": true,
+  "removeWordsIfNoResults": "lastWords",
+  "disableTypoToleranceOnWords": [
+    "vegan"
+  ]
+}

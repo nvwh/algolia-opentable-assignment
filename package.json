@@ -1,0 +1,26 @@
+{
+  "name": "opentable-discovery-demo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.6"
+  },
+  "scripts": {
+    "data:prepare": "node scripts/prepare-data.mjs",
+    "data:configure": "node --env-file=.env scripts/configure-index.mjs",
+    "data:index": "node --env-file=.env scripts/index-data.mjs",
+    "data:all": "npm run data:prepare && npm run data:configure && npm run data:index",
+    "dev": "vite app",
+    "build": "vite build app --outDir ../dist --emptyOutDir",
+    "preview": "vite preview app --outDir ../dist",
+    "check:keys": "sh -c 'set -a; [ -f .env ] && . ./.env; ! grep -rIn -e ADMIN ${ALGOLIA_ADMIN_KEY:+-e \"$ALGOLIA_ADMIN_KEY\"} app dist 2>/dev/null'",
+    "test:queries": "node --env-file=.env scripts/test-queries.mjs"
+  },
+  "dependencies": {
+    "algoliasearch": "5.64.0",
+    "instantsearch.js": "4.123.0"
+  },
+  "devDependencies": {
+    "vite": "8.3.8"
+  }
+}
