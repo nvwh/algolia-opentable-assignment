@@ -7,7 +7,7 @@ import {
 import { connectRefinementList } from 'instantsearch.js/es/connectors';
 // Index and replica names come from the frozen contract, so the UI cannot drift from the index.
 import { index as INDEX, replicas } from '../../search-config/contract.json';
-import { card, miles, SHOW_PHOTOS } from './card.js';
+import { card, distance, SHOW_PHOTOS } from './card.js';
 import { locationWidget, locationMode, setLocationMode, renderLocation } from './location.js';
 import { enhanceSearchBox } from './searchbox.js';
 import './styles.css';
@@ -26,6 +26,7 @@ const preview = !appId || !apiKey;
 const searchClient = preview ? (await import('./preview/stub-client.js')).stubClient : liteClient(appId, apiKey);
 $('.preview-badge').hidden = !preview;
 
+const filters = $('#filters');
 const search = instantsearch({ searchClient, routing: true, future: { preserveSharedStateOnUnmount: true } });
 const setMain = (patch) => search.setUiState((ui) => ({ ...ui, [INDEX]: patch(ui[INDEX] ?? {}) }));
 
@@ -36,79 +37,89 @@ const searchableFacet = (container, attribute, noun) =>
 const rating = (container) => numericMenu({
   container,
   attribute: 'stars_count',
-  items: [{ label: 'Any rating' }, { label: '4.5 and up', start: 4.5 }, { label: '4 and up', start: 4 }, { label: '3.5 and up', start: 3.5 }],
+  items: [{ label: 'Any rating' }, { label: '4.5 and up', start: 4.5 }, { label: '4 and up', start: 4 }],
 });
 
-// Tiles: one sibling index per tag, one hit each. They cost three queries, so they are mounted only while browsing.
+// Tiles: one sibling index per tag, one hit each (the top pick). They cost three queries, so they are mounted only while browsing.
 const tileWidget = (id) => ({
   $$type: 'opentable.tile',
   render({ results }) {
-    const hit = results?.hits[0];
+    if (!results) return;
+    const hit = results.hits[0];
     const media = $(`#tile-${id}`);
-    if (!hit || media.dataset.id === hit.objectID) return;
-    media.dataset.id = hit.objectID;
-    media.innerHTML = `<span class="tile-fallback"><small>Top pick near you</small><span></span></span>${SHOW_PHOTOS ? '<img alt="" />' : ''}`;
-    media.querySelector('.tile-fallback span').textContent = hit.name;
-    const img = media.querySelector('img');
-    if (img) {
-      img.onerror = () => (img.hidden = true);
-      img.src = hit.image_url;
-    }
+    media.closest('.tile').querySelector('.tile-pick').textContent = hit ? `Top pick: ${hit.name}` : '';
     $('.tiles').classList.add('is-ready');
+    if (!SHOW_PHOTOS || !hit || media.dataset.id === hit.objectID) return;
+    media.dataset.id = hit.objectID;
+    // A broken photo is removed, not replaced: CSS hides the empty thumbnail and the colour card stands alone.
+    media.innerHTML = '<img alt="" />';
+    const img = media.firstChild;
+    img.onerror = () => media.replaceChildren();
+    img.onload = () => media.classList.add('is-loaded'); // show the square only once a photo is really there
+    img.src = hit.image_url;
   },
-  // No dispose on purpose: the last photos stay in the DOM, so the no-results state can show them without a query.
+  // No dispose on purpose: the last picks stay in the DOM, so the no-results state can show them without a query.
 });
-const tiles = Object.entries(TILES).map(([id, tag]) =>
-  index({ indexName: INDEX, indexId: `tile-${id}` }).addWidgets([configure({ facetFilters: [`tags:${tag}`], hitsPerPage: 1 }), tileWidget(id)]));
-let tilesOn = false;
-// Results posture = a query or any refinement, so a filter docks the bar exactly like typing does.
-// The one exception is the metro picked from the far-away notice: the visitor is still browsing that metro.
-const hasValue = (v) => (Array.isArray(v) ? v.length > 0 : Object.values(v ?? {}).some(hasValue));
-const isFind = (state, query = state.query) => {
-  const { area, ...facets } = state.disjunctiveFacetsRefinements;
-  return Boolean(query) || hasValue({ ...facets, ...state.facetsRefinements, ...state.numericRefinements, area: locationMode() === 'metro' ? [] : area });
-};
-// Decided from the state being sent, not the last response: InstantSearch re-renders stale results while widgets change.
-const wantTiles = (query, state = main.getHelper().state) => !isFind(state, query) && !document.body.hasAttribute('data-far') && locationMode() !== 'metro';
+// Inside a chosen metro the tiles carry it as a facetFilter, so the top pick matches the metro. The tile indices are
+// siblings of the main one (they must not inherit its refinements), so the area cannot reach them through the UI state:
+// rebuilding the three small indices when the metro changes is the least machinery.
+const tileIndices = (area) => Object.entries(TILES).map(([id, tag]) =>
+  index({ indexName: INDEX, indexId: `tile-${id}` }).addWidgets([
+    configure({ facetFilters: [`tags:${tag}`, ...(area ? [`area:${area}`] : [])], hitsPerPage: 1 }), tileWidget(id),
+  ]));
+let tiles; // mounted tile indices, undefined while unmounted
+let tilesArea; // the metro they were built for
+let metroArea; // the metro being browsed now (only set while the far-away picker's metro is active)
+let refined = false; // any refinement beyond that metro: results posture, no tiles
+// Tiles only exist while browsing. Decided from the query being sent, not the last response: InstantSearch re-renders stale results while widgets change.
+const wantTiles = (query) => !query && !refined;
 function mountTiles(on) {
-  if (on === tilesOn) return;
-  tilesOn = on;
-  on ? search.addWidgets(tiles) : search.removeWidgets(tiles);
+  if (on === Boolean(tiles) && (!on || tilesArea === metroArea)) return;
+  if (tiles) search.removeWidgets(tiles);
+  tiles = on ? tileIndices((tilesArea = metroArea)) : undefined;
+  if (tiles) search.addWidgets(tiles);
 }
 
 // The posture is read from Algolia's own response: an empty query is browsing, a typed query is finding.
 let hadArea = false;
-let lastRefinements;
+let lastSig;
 const posture = {
   $$type: 'opentable.posture',
   render({ results, state }) {
     if (!results) return;
+    // The typed query, not query: a Rule may rewrite the query sent to Algolia ("romantic" -> filter), and the posture must follow what the user typed.
+    const query = state.query || '';
     const area = state.disjunctiveFacetsRefinements.area?.[0];
     const tag = state.disjunctiveFacetsRefinements.tags?.[0];
     const top = results.hits[0];
-    const next = results.nbHits === 0 ? 'empty' : isFind(state) ? 'find' : 'browse';
+    // Any refinement leads to results, like typing does; only the metro picked from the far-away notice is still browsing.
+    const metro = locationMode() === 'metro';
+    const refinements = results.getRefinements().filter((r) => !(metro && r.attributeName === 'area'));
+    refined = refinements.length > 0;
+    metroArea = metro ? area : undefined;
+    const next = results.nbHits === 0 ? 'empty' : query || refined ? 'find' : 'browse';
+    const sig = refinements.map((r) => r.attributeName + r.name).join();
     // Geo only ranks, so the nearest hit always exists; if it is far away, the visitor is outside the dataset.
-    const far = next === 'browse' && !area && top?._rankingInfo?.matchedGeoLocation?.distance > NEARBY_METRES;
+    const far = !query && !area && top?._rankingInfo?.matchedGeoLocation?.distance > NEARBY_METRES;
     const place = (value) => value.split(' / ')[0];
 
-    // Back to the top when the answer changes shape (landing <-> results) or the refinements change; never per keystroke.
-    const refinements = JSON.stringify(results.getRefinements());
-    const reshaped = (document.body.dataset.posture === 'browse') !== (next === 'browse');
-    const refined = refinements !== (lastRefinements ??= refinements) && next !== 'browse';
-    lastRefinements = refinements;
     if (document.body.dataset.posture !== next) settle(next);
-    else if (results.page === 0) fade();
-    if (reshaped || refined) toTop();
-    document.body.toggleAttribute('data-far', far);
-    $('#far').hidden = !far;
+    else {
+      // Same posture, new refinements: show the results from their start (the docked bar is sticky, so the top is the first card).
+      if (next !== 'browse' && sig !== lastSig) toTop(true);
+      if (results.page === 0) fade();
+    }
+    lastSig = sig;
+    $('#far').hidden = !far || next !== 'browse'; // the docked bar has no room for the notice
     if (far && !$('#metro').options.length) fillMetros(results);
-    queueMicrotask(() => mountTiles(wantTiles(state.query, state)));
+    queueMicrotask(() => mountTiles(wantTiles(state.query)));
 
-    const near = next === 'browse' && !area && top && !far ? place(top.area) : undefined;
+    const near = !query && !area && top && !far ? place(top.area) : undefined;
     const where = area ? `in ${place(area)}` : far ? 'closest to you' : `near ${near ?? 'you'}`;
+    $('.tiles-title').textContent = metroArea ? `Popular in ${place(metroArea)}` : far ? 'Popular in the demo cities' : 'Popular near you';
+    $('#search-pill-text').textContent = query || 'Search restaurants';
     $('#lead-title').textContent = next === 'find' ? 'Results' : tag ? `${TILE_TITLES[tag]} ${where}` : where[0].toUpperCase() + where.slice(1);
-    $('#empty-query').textContent = results.query || 'these filters';
-    $('#clear-query').hidden = !results.query;
+    $('#empty-query').textContent = query;
     $('#filter-count').textContent = results.getRefinements().length || '';
 
     // Pills show how many values each one has applied, so the closed bar still tells the story.
@@ -118,21 +129,29 @@ const posture = {
       pill.toggleAttribute('data-active', Boolean(applied[pill.dataset.attr]));
     });
 
-    // Tile counts follow the current filters; only the landing updates them so the empty state keeps the browse numbers.
-    const counts = Object.fromEntries((results.getFacetValues('tags') ?? []).map((v) => [v.name, v.count]));
-    $$('.tile').forEach((tile) => {
-      if (next === 'browse') {
+    // Tile counts follow the current filters; skip while a query is typed or nothing matches, so the empty state keeps the browse numbers.
+    if (!query && next !== 'empty') {
+      const counts = Object.fromEntries((results.getFacetValues('tags') ?? []).map((v) => [v.name, v.count]));
+      $$('.tile').forEach((tile) => {
         const n = counts[tile.dataset.tag] ?? 0;
         tile.querySelector('.tile-count').textContent = `${n.toLocaleString('en-US')} ${n === 1 ? 'restaurant' : 'restaurants'}`;
-      }
-      tile.setAttribute('aria-pressed', tile.dataset.tag === tag); // always, so a tile in the empty state can still toggle off
-    });
+        tile.setAttribute('aria-pressed', tile.dataset.tag === tag);
+      });
+    }
+
+    // A name search (full name match, or the query sits inside the top hit's name/brand) compares branches: rows.
+    // Anything else (cuisine, city, broad) is browsing photos: cards. CSS switches on this attribute.
+    // Algolia says which attribute matched: if the words hit the cuisine ("steak"), it is browsing even when a name also contains them.
+    const hl = top?._highlightResult ?? {};
+    const byCuisine = [hl.cuisine_group, hl.food_type].some((h) => h && h.matchLevel !== 'none');
+    const byName = query && !byCuisine && hl.name?.matchLevel && hl.name.matchLevel !== 'none';
+    document.body.dataset.results = next === 'find' ? (byName ? 'list' : 'cards') : '';
 
     // The relevance badge explains the engine without jargon: typo tolerance and geo, straight from the ranking info.
-    // Distance only when it is a local result (under 50 mi); a far top match is a name search, not a nearby one.
-    const info = next === 'find' ? top?._rankingInfo : null;
+    // Distance only when it is a local result (under 80 km, about 50 mi); a far top match is a name search, not a nearby one.
+    const info = next === 'find' && query ? top?._rankingInfo : null;
     $('#badge').textContent = info
-      ? [info.nbTypos > 0 && 'Typo forgiven', info.matchedGeoLocation?.distance > 0 && info.matchedGeoLocation.distance < 80_000 && `Within ${miles(info.matchedGeoLocation.distance)}`].filter(Boolean).join(' · ')
+      ? [info.nbTypos > 0 && 'Typo forgiven', info.matchedGeoLocation?.distance > 0 && info.matchedGeoLocation.distance < 80_000 && `Within ${distance(info.matchedGeoLocation.distance)}`].filter(Boolean).join(' · ')
       : '';
 
     // Clearing the metro chosen from the notice brings back ranking by the visitor's location.
@@ -142,16 +161,17 @@ const posture = {
   },
 };
 
-const filters = $('#filters');
-let pendingTop = false;
-// While the filter sheet is open the scroll waits for its close, so the page does not jump behind the dialog.
-function toTop() {
-  if (filters.open) pendingTop = true;
-  else if (scrollY > 0) scrollTo({ top: 0 });
-}
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+// A scroll asked for while the filter sheet is open waits for it to close, so "Show N restaurants" lands on the results.
+let pendingTop = false;
+function toTop(smooth) {
+  if (filters.open) return (pendingTop = true);
+  scrollTo({ top: 0, behavior: smooth && !reduceMotion.matches ? 'smooth' : 'auto' });
+}
+filters.addEventListener('close', () => pendingTop && ((pendingTop = false), toTop(true)));
 function settle(next) {
   document.body.dataset.posture = next;
+  toTop(); // each posture starts at the top: the results below the docked bar, or the landing again
   if (!reduceMotion.matches) {
     $('.panel').animate([{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }], { duration: 250, easing: 'cubic-bezier(.2,.7,.2,1)' });
   }
@@ -167,7 +187,7 @@ function fillMetros(results) {
 const main = index({ indexName: INDEX, indexId: INDEX }).addWidgets([
   searchBox({
     container: '#searchbox',
-    placeholder: 'Name, cuisine, city',
+    placeholder: 'Type to search',
     showLoadingIndicator: false,
     showSubmit: false,
     // Swap the tiles in or out before the query goes out, so typing costs one query instead of four.
@@ -212,14 +232,12 @@ search.addWidgets([locationWidget, main]);
 search.on('render', () => document.body.toggleAttribute('data-stalled', search.status === 'stalled'));
 search.start();
 // Mount the tiles with the first request when the page opens on the landing, instead of a second round trip.
-mountTiles(wantTiles(search.getUiState()[INDEX]?.query));
+const first = search.getUiState()[INDEX] ?? {};
+refined = Object.values({ ...first.refinementList, ...first.numericMenu }).some((v) => v?.length);
+mountTiles(wantTiles(first.query));
 enhanceSearchBox();
 
 $('#open-filters').addEventListener('click', () => filters.showModal());
-filters.addEventListener('close', () => { // "Show N restaurants" closes the dialog first, then the results come into view
-  if (pendingTop) toTop();
-  pendingTop = false;
-});
 
 // <details> has no light dismiss: close the open pill on Escape (focus back on it) and on a click elsewhere.
 document.addEventListener('keydown', (event) => {
@@ -232,7 +250,7 @@ document.addEventListener('click', (event) => {
   $$('.pill[open]').forEach((pill) => pill.contains(event.target) || (pill.open = false));
 });
 
-// A tile is a toggle on the tags refinement; from the no-results state it also clears the dead-end query.
+// A tile is a toggle on the tags refinement (the posture rule then scrolls to the results); from the no-results state it also clears the dead-end query.
 $$('.tile').forEach((tile) => tile.addEventListener('click', () => {
   const on = tile.getAttribute('aria-pressed') !== 'true';
   setMain((ui) => ({ ...ui, query: '', page: undefined, refinementList: { ...ui.refinementList, tags: on ? [tile.dataset.tag] : [] } }));
@@ -248,3 +266,12 @@ $('#clear-query').addEventListener('click', () => {
   setMain((ui) => ({ ...ui, query: '' }));
   $('#searchbox input').focus();
 });
+
+// The header offers search once the field has scrolled under it. The sticky header covers the top of the viewport, so it is cut off the observed area.
+const input = $('#searchbox input');
+const stageHidden = () => document.body.hasAttribute('data-stage-hidden') && document.body.dataset.posture === 'browse'; // docked bar: always in view
+new IntersectionObserver(([entry]) => document.body.toggleAttribute('data-stage-hidden', !entry.isIntersecting), { rootMargin: `-${$('.top').offsetHeight}px 0px 0px 0px` }).observe($('.field'));
+// Every way into the box (pill, "/", type anywhere) goes through focus: bring the field back first, so it is never typed into off screen.
+let glide = false;
+input.addEventListener('focus', () => stageHidden() && toTop(glide));
+$('#search-pill').addEventListener('click', () => { glide = true; input.focus({ preventScroll: true }); glide = false; });

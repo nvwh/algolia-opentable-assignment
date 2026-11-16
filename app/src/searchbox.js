@@ -1,5 +1,5 @@
 // Prompts are real queries that return results, so the placeholder doubles as a tour of what search understands.
-const PROMPTS = ['Try “ruths chris”', 'Seafood in San Diego', 'Italian in Brooklyn', 'Sushi in Honolulu', 'Steakhouse, Houston'];
+const PROMPTS = ['Try “ruths chris”', 'Sushi in Honolulu', 'Italian in Brooklyn', 'Seafood in San Diego', 'Steakhouse in Houston'];
 
 export function enhanceSearchBox() {
   const input = document.querySelector('#searchbox input');
@@ -18,6 +18,16 @@ export function enhanceSearchBox() {
   });
 
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  // "Type to search" (set by the widget) stays up on load; the first example appears after one full interval.
   let i = 0;
-  setInterval(() => (input.placeholder = PROMPTS[i++ % PROMPTS.length]), 3500);
+  setInterval(() => {
+    // Hold still while the user is in the box or has typed something.
+    if (document.activeElement === input || input.value) return;
+    // Expects `.ph-fade::placeholder { opacity: 0 }` with a transition on ::placeholder opacity in styles.css.
+    input.classList.add('ph-fade');
+    setTimeout(() => {
+      input.placeholder = PROMPTS[i++ % PROMPTS.length];
+      input.classList.remove('ph-fade');
+    }, 250);
+  }, 8000);
 }
