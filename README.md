@@ -4,6 +4,8 @@
 
 A prototype of how OpenTable's search and discovery could feel on Algolia, built for the Algolia Solutions Engineer assignment.
 
+**Disclaimer:** This is an unofficial concept built for a hiring assignment. It is not affiliated with, endorsed by or sponsored by OpenTable or Algolia. OpenTable’s name and logo are trademarks of OpenTable, Inc. and are used here only to illustrate the concept. Restaurant data comes from the assignment’s sample dataset.
+
 ## Approach in short
 
 OpenTable loses bookings in two places. People who search for a restaurant misspell it or pick the wrong branch of a chain, and people who are just browsing and looking for inspiration don't get a proper experience.
